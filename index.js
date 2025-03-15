@@ -383,40 +383,10 @@ async function bindSettingsHandlers() {
 
 /**
  * Adds the extension buttons to the UI
- * This adds a button to toggle between truncated and normal messages
+ * Currently just initializes the UI state
  */
 async function addExtensionControls() {
-    // Add a button to the send form to toggle truncation
-    const sendFormArea = document.querySelector('#send_form');
-    if (sendFormArea && !document.querySelector('#cache_refresher_truncate_toggle')) {
-        const truncateButton = document.createElement('button');
-        truncateButton.id = 'cache_refresher_truncate_toggle';
-        truncateButton.className = 'menu_button fa-solid';
-        truncateButton.classList.add(settings.useTruncation ? 'fa-scissors' : 'fa-align-left');
-        truncateButton.title = settings.useTruncation ? 'Using truncated messages (click to use full messages)' : 'Using full messages (click to use truncated messages)';
-        
-        // Add the button to the send form
-        const sendButton = document.querySelector('#send_but');
-        if (sendButton && sendButton.parentNode) {
-            sendButton.parentNode.insertBefore(truncateButton, sendButton);
-            
-            // Add click event listener
-            truncateButton.addEventListener('click', function(event) {
-                event.preventDefault();
-                settings.useTruncation = !settings.useTruncation;
-                saveSettings();
-                
-                // Update button appearance
-                truncateButton.classList.toggle('fa-scissors', settings.useTruncation);
-                truncateButton.classList.toggle('fa-align-left', !settings.useTruncation);
-                truncateButton.title = settings.useTruncation ? 'Using truncated messages (click to use full messages)' : 'Using full messages (click to use truncated messages)';
-                
-                // Show notification
-                showNotification(`${settings.useTruncation ? 'Truncated' : 'Full'} messages will be used for cache refreshing`, 'info');
-            });
-        }
-    }
-    
+    // No need to add buttons - the extension will be controlled through the settings panel
     updateUI();
 }
 
