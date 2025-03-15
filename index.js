@@ -485,9 +485,8 @@ async function refreshCache() {
 
         // Create a truncated version of the conversation history
         const refreshData = {...lastGenerationData};
-        if (refreshData.chat && Array.isArray(refreshData.chat)) {
-            // Truncate the conversation to only include messages up to the caching depth
-            refreshData.chat = truncateConversationHistory(refreshData.chat);
+        if (refreshData.prompt && Array.isArray(refreshData.prompt) && chatCompletionSettings.chat_completion_source === "openrouter") {
+            refreshData.prompt = truncateConversationHistory(refreshData.prompt);
             debugLog('Using truncated conversation for refresh', refreshData);
         }
 
@@ -610,9 +609,6 @@ function captureGenerationData(data) {
             debugLog('captureGenerationData: Not a chat completion prompt');
             return;
         }
-        if (chatCompletionSettings.chat_completion_source === "openrouter") {
-            debugLog('captureGenerationData: openrouter');
-        }
 
         // Skip dry runs as they're not actual messages
         // Dry runs are used for things like token counting and don't represent actual chat messages
@@ -625,7 +621,8 @@ function captureGenerationData(data) {
         lastGenerationData.prompt = data.chat;
         debugLog('Captured generation data', lastGenerationData);
 
-        
+        //Debuging
+        debugLog('captureGenerationData: Example truncation', truncateConversationHistory(lastGenerationData.prompt, cachingAtDepth));
 
         //Stop refresh cycle on new prompt (work better than GENERATION_STOPPED event)
         stopRefreshCycle();
