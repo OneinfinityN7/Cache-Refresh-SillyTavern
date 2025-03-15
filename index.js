@@ -522,64 +522,38 @@ async function refreshCache() {
     }
 }
 
-export function cachingAtDepthForClaude(messages, cachingAtDepth) {
-    let passedThePrefill = false;
-    let depth = 0;
-    let previousRoleName = '';
-
-    for (let i = messages.length - 1; i >= 0; i--) {
-        if (!passedThePrefill && messages[i].role === 'assistant') {
-            continue;
-        }
-
-        passedThePrefill = true;
-
-        if (messages[i].role !== previousRoleName) {
-            if (depth === cachingAtDepth || depth === cachingAtDepth + 2) {
-                const content = messages[i].content;
-                content[content.length - 1].cache_control = { type: 'ephemeral' };
-            }
-
-            if (depth === cachingAtDepth + 2) {
-                break;
-            }
-
-            depth += 1;
-            previousRoleName = messages[i].role;
-        }
-    }
-}
-
 /**
  * Truncates the conversation history to only include messages up to a certain depth
+ * Complete reverse engineering of cachingAtDepthForOpenRouterClaude
  * This makes cache refreshes more efficient by focusing only on the most recent and relevant parts
  * 
  * @param {Array} messages - The full conversation history
  * @param {number} cachingDepth - The depth to truncate at (number of role transitions to keep)
  * @returns {Array} - The truncated conversation history
  */
-function truncateConversationHistory(messages, cachingDepth) {
+function truncateConversationHistory(messages, cachingDepth = cachingAtDepth) {
+    let passedThePrefill = false;
     let depth = 0;
     const n_messages = messages.length - 1;
-    let index = n_messages;
     let previousRoleName = '';
 
-    if (messages[messages.length - 1].role === 'assistant') {
-        depth -= 1;
-    }
-    for (let i = messages.length - 1; i >= 0; i--) {
+    for (let i = n_messages; i >= 0; i--) {
+        if (!passedThePrefill && messages[i].role === 'assistant') {
+            continue;
+        }
+        passedThePrefill = true;
         if (messages[i].role !== previousRoleName) {
-            if (depth === cachingDepth + 2) {
+            if (depth === cachingDepth) {
                 break;
             }
             depth += 1;
             previousRoleName = messages[i].role;
         }
-        index -= 1;
+        debugLog(`truncateConversationHistory ${i} ${depth}`);
     }
-    messages.splice(n_messages - depth);
-    debugLog(`Truncated conversation from ${n_messages} to ${messages.length} messages at depth ${depth}`);
-    return messages;
+    const truncatedMessages = messages.slice(0, n_messages - depth);
+    debugLog(`Truncated conversation from ${n_messages} to ${truncatedMessages.length} messages at depth ${depth}`);
+    return truncatedMessages;
 }
 
 /**
@@ -619,9 +593,6 @@ function captureGenerationData(data) {
         // Store the chat prompt for future refreshes
         lastGenerationData.prompt = data.chat;
         debugLog('Captured generation data', lastGenerationData);
-
-        //Debuging
-        debugLog('captureGenerationData: Example truncation', truncateConversationHistory(lastGenerationData.prompt, cachingAtDepth));
 
         //Stop refresh cycle on new prompt (work better than GENERATION_STOPPED event)
         stopRefreshCycle();
