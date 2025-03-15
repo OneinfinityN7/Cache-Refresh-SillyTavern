@@ -137,8 +137,8 @@ let refreshInProgress = false;          // Flag to prevent concurrent refreshes
 let statusIndicator = null;             // DOM element for the floating status indicator
 let nextRefreshTime = null;             // Timestamp for the next scheduled refresh
 let statusUpdateInterval = null;        // Interval for updating the countdown timer
-const cachingAtDepth = 2;               // For essential caching. Depth of the caching (couldn't verify the config.yaml directly)
-const enableSystemPromptCache = false;  // For essential caching. If system prompt option is on (couldn't verify the config.yaml directly)
+const cachingAtDepth = 2;               // For essential caching. Depth of the caching (couldn't verify the config.yaml directly) 
+// No system caching for OpenRouter.
 
 /**
  * Logs a message to console with extension prefix for easier debugging
@@ -522,65 +522,64 @@ async function refreshCache() {
     }
 }
 
+export function cachingAtDepthForClaude(messages, cachingAtDepth) {
+    let passedThePrefill = false;
+    let depth = 0;
+    let previousRoleName = '';
+
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (!passedThePrefill && messages[i].role === 'assistant') {
+            continue;
+        }
+
+        passedThePrefill = true;
+
+        if (messages[i].role !== previousRoleName) {
+            if (depth === cachingAtDepth || depth === cachingAtDepth + 2) {
+                const content = messages[i].content;
+                content[content.length - 1].cache_control = { type: 'ephemeral' };
+            }
+
+            if (depth === cachingAtDepth + 2) {
+                break;
+            }
+
+            depth += 1;
+            previousRoleName = messages[i].role;
+        }
+    }
+}
+
 /**
  * Truncates the conversation history to only include messages up to a certain depth
  * This makes cache refreshes more efficient by focusing only on the most recent and relevant parts
  * 
  * @param {Array} messages - The full conversation history
- * @param {number} depth - The depth to truncate at (number of role transitions to keep)
+ * @param {number} cachingDepth - The depth to truncate at (number of role transitions to keep)
  * @returns {Array} - The truncated conversation history
  */
-function truncateConversationHistory(messages, depth = cachingAtDepth) {
-    if (!messages || !Array.isArray(messages) || messages.length === 0) {
-        return messages;
-    }
+function truncateConversationHistory(messages, cachingDepth) {
+    let depth = 0;
+    const n_messages = messages.length - 1;
+    let index = n_messages;
+    let previousRoleName = '';
 
-    // Create a copy of the messages array to avoid modifying the original
-    const truncatedMessages = [];
-    
-    // Skip system messages at the beginning (they're always included)
-    let systemMessagesEnd = 0;
-    while (systemMessagesEnd < messages.length && messages[systemMessagesEnd].role === 'system') {
-        truncatedMessages.push(messages[systemMessagesEnd]);
-        systemMessagesEnd++;
+    if (messages[messages.length - 1].role === 'assistant') {
+        depth -= 1;
     }
-    
-    // If we only have system messages or reached the end, return what we have
-    if (systemMessagesEnd >= messages.length) {
-        return truncatedMessages;
+    for (let i = messages.length - 1; i >= 0; i--) {
+        if (messages[i].role !== previousRoleName) {
+            if (depth === cachingDepth + 2) {
+                break;
+            }
+            depth += 1;
+            previousRoleName = messages[i].role;
+        }
+        index -= 1;
     }
-    
-    // Process the conversation messages (non-system)
-    let currentDepth = 0;
-    let previousRole = '';
-    
-    // Start from the most recent message and work backwards
-    for (let i = messages.length - 1; i >= systemMessagesEnd; i--) {
-        const message = messages[i];
-        
-        // Skip any trailing assistant messages (they're usually incomplete)
-        if (currentDepth === 0 && message.role === 'assistant') {
-            continue;
-        }
-        
-        // Count a new depth when the role changes
-        if (message.role !== previousRole) {
-            currentDepth++;
-            previousRole = message.role;
-        }
-        
-        // Add the message to our truncated list if we're within the desired depth
-        if (currentDepth <= depth) {
-            // Add at the beginning since we're iterating backwards
-            truncatedMessages.splice(systemMessagesEnd, 0, message);
-        } else {
-            // We've reached our depth limit, stop processing
-            break;
-        }
-    }
-    
-    debugLog(`Truncated conversation from ${messages.length} to ${truncatedMessages.length} messages at depth ${depth}`);
-    return truncatedMessages;
+    messages.splice(n_messages - depth);
+    debugLog(`Truncated conversation from ${n_messages} to ${messages.length} messages at depth ${depth}`);
+    return messages;
 }
 
 /**
