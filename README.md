@@ -47,13 +47,6 @@ Could have refresh 6 times (35 minutes between messages) and it would have cost 
 2.  **Install the Extension:** In SillyTavern, go to the Extensions menu (the puzzle piece icon). Click the "Install extension" button (top right) and enter: https://github.com/OneinfinityN7/Cache-Refresh-SillyTavern
 3.  **Enable the Extension:** In the Extensions menu, you'll find a new "Cache Refresher" panel containing all the extension's options.
 
-## Features
-
-* **Automatic Cache Refreshing:** Keeps your model's cache warm by sending periodic minimal requests.
-* **Truncation Toggle:** A scissors/text icon button next to the send button lets you switch between using full or truncated message history for cache refreshing.
-* **Configurable Caching Depth:** Set how many message exchanges to include in truncated refreshes.
-* **Visual Indicators:** Status display shows refresh count and countdown timer.
-
 ## Troubleshooting
 
 *   **Extension Not Appearing:** Ensure you've installed the extension correctly and restarted SillyTavern.
@@ -67,7 +60,6 @@ Could have refresh 6 times (35 minutes between messages) and it would have cost 
       * Restart SillyTavern after modifying these configuration parameters.
       * Ensure you're using `Chat Completion` mode, as Claude doesn't support caching for `Text Completion`.
       * For optimal caching, it's recommended to set `cachingAtDepth` to an even number. The number represents caching depth: 0 is your most recent message (not recommended), 2 represents the two previous messages before (usually sufficient).
-      * You can now set the caching depth directly in the extension settings and toggle between full and truncated messages using the scissors/text icon button next to the send button.
       * When using `enableSystemPromptCache` (Claude endpoints only, always on for OpenRouter), avoid random elements or lorebooks in your system prompt.
       * Learn more about Claude caching at: https://rentry.org/pay-the-piper-less
       * Be aware that `openai_max_context` in your `Chat Completion` settings can provoke unexpected behavior.
