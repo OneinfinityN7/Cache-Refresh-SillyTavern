@@ -487,7 +487,7 @@ async function refreshCache() {
         const refreshData = {...lastGenerationData};
         if (refreshData.chat && Array.isArray(refreshData.chat)) {
             // Truncate the conversation to only include messages up to the caching depth
-            refreshData.chat = truncateConversationHistory(refreshData.chat, cachingAtDepth);
+            refreshData.chat = truncateConversationHistory(refreshData.chat);
             debugLog('Using truncated conversation for refresh', refreshData);
         }
 
@@ -528,10 +528,10 @@ async function refreshCache() {
  * This makes cache refreshes more efficient by focusing only on the most recent and relevant parts
  * 
  * @param {Array} messages - The full conversation history
- * @param {number} cachingDepth - The depth to truncate at (number of role transitions to keep)
+ * @param {number} depth - The depth to truncate at (number of role transitions to keep)
  * @returns {Array} - The truncated conversation history
  */
-function truncateConversationHistory(messages, cachingDepth) {
+function truncateConversationHistory(messages, depth = cachingAtDepth) {
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
         return messages;
     }
@@ -552,7 +552,7 @@ function truncateConversationHistory(messages, cachingDepth) {
     }
     
     // Process the conversation messages (non-system)
-    let depth = 0;
+    let currentDepth = 0;
     let previousRole = '';
     
     // Start from the most recent message and work backwards
@@ -560,18 +560,18 @@ function truncateConversationHistory(messages, cachingDepth) {
         const message = messages[i];
         
         // Skip any trailing assistant messages (they're usually incomplete)
-        if (depth === 0 && message.role === 'assistant') {
+        if (currentDepth === 0 && message.role === 'assistant') {
             continue;
         }
         
         // Count a new depth when the role changes
         if (message.role !== previousRole) {
-            depth++;
+            currentDepth++;
             previousRole = message.role;
         }
         
         // Add the message to our truncated list if we're within the desired depth
-        if (depth <= cachingDepth) {
+        if (currentDepth <= depth) {
             // Add at the beginning since we're iterating backwards
             truncatedMessages.splice(systemMessagesEnd, 0, message);
         } else {
@@ -580,7 +580,7 @@ function truncateConversationHistory(messages, cachingDepth) {
         }
     }
     
-    debugLog(`Truncated conversation from ${messages.length} to ${truncatedMessages.length} messages at depth ${cachingDepth}`);
+    debugLog(`Truncated conversation from ${messages.length} to ${truncatedMessages.length} messages at depth ${depth}`);
     return truncatedMessages;
 }
 
