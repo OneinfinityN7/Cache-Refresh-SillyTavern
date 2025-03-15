@@ -129,14 +129,16 @@ console.log('Cache Refresher: Settings initialized', settings);
 
 // State variables
 let lastGenerationData = {
-    prompt: null,                // Stores the last prompt sent to the AI model
-};
-let refreshTimer = null;         // Timer for scheduling the next refresh
-let refreshesLeft = 0;           // Counter for remaining refreshes in the current cycle
-let refreshInProgress = false;   // Flag to prevent concurrent refreshes
-let statusIndicator = null;      // DOM element for the floating status indicator
-let nextRefreshTime = null;      // Timestamp for the next scheduled refresh
-let statusUpdateInterval = null; // Interval for updating the countdown timer
+    prompt: null,                       // Stores the last prompt sent to the AI model
+};      
+let refreshTimer = null;                // Timer for scheduling the next refresh
+let refreshesLeft = 0;                  // Counter for remaining refreshes in the current cycle
+let refreshInProgress = false;          // Flag to prevent concurrent refreshes
+let statusIndicator = null;             // DOM element for the floating status indicator
+let nextRefreshTime = null;             // Timestamp for the next scheduled refresh
+let statusUpdateInterval = null;        // Interval for updating the countdown timer
+const cachingAtDepth = 2;               // For essential caching. Depth of the caching (couldn't verify the config.yaml directly)
+const enableSystemPromptCache = false;  // For essential caching. If system prompt option is on (couldn't verify the config.yaml directly)
 
 /**
  * Logs a message to console with extension prefix for easier debugging
@@ -513,6 +515,46 @@ async function refreshCache() {
     }
 }
 
+// export function cachingAtDepthForOpenRouterClaude(messages, cachingAtDepth) {
+//     //caching the prefill is a terrible idea in general
+//     let passedThePrefill = false;
+//     //depth here is the number of message role switches
+//     let depth = 0;
+//     let previousRoleName = '';
+//     for (let i = messages.length - 1; i >= 0; i--) {
+//         if (!passedThePrefill && messages[i].role === 'assistant') {
+//             continue;
+//         }
+
+//         passedThePrefill = true;
+
+//         if (messages[i].role !== previousRoleName) {
+//             if (depth === cachingAtDepth || depth === cachingAtDepth + 2) {
+//                 const content = messages[i].content;
+//                 if (typeof content === 'string') {
+//                     messages[i].content = [{
+//                         type: 'text',
+//                         text: content,
+//                         cache_control: { type: 'ephemeral' },
+//                     }];
+//                 } else {
+//                     const contentPartCount = content.length;
+//                     content[contentPartCount - 1].cache_control = {
+//                         type: 'ephemeral',
+//                     };
+//                 }
+//             }
+
+//             if (depth === cachingAtDepth + 2) {
+//                 break;
+//             }
+
+//             depth += 1;
+//             previousRoleName = messages[i].role;
+//         }
+//     }
+// }
+
 /**
  * Captures generation data for future cache refreshing
  * This is called when a new message is generated to store the prompt for later refreshes
@@ -536,20 +578,26 @@ function captureGenerationData(data) {
     try {
         // Only support chat completion APIs for now
         if (!isChatCompletion()) {
-            debugLog('Cache Refresher: Not a chat completion prompt');
+            debugLog('captureGenerationData: Not a chat completion prompt');
             return;
+        }
+        if (chatCompletionSettings.chat_completion_source === "openrouter") {
+            debugLog('captureGenerationData: openrouter');
         }
 
         // Skip dry runs as they're not actual messages
         // Dry runs are used for things like token counting and don't represent actual chat messages
         if (data.dryRun) {
-            debugLog('Cache Refresher: Skipping dry run');
+            debugLog('captureGenerationData: Skipping dry run');
             return;
         }
 
         // Store the chat prompt for future refreshes
         lastGenerationData.prompt = data.chat;
         debugLog('Captured generation data', lastGenerationData);
+
+        
+
         //Stop refresh cycle on new prompt (work better than GENERATION_STOPPED event)
         stopRefreshCycle();
 
@@ -597,15 +645,12 @@ jQuery(async ($) => {
         bindSettingsHandlers();
 
         // Set up event listeners for SillyTavern events
-
-        // Listen for chat completion prompts to capture them for refreshing
         eventSource.on(eventTypes.APP_READY, () => {
+            
+            // Listen for chat completion prompts to capture them for refreshing, and cancel the refreshing is successfull
             eventSource.on(eventTypes.CHAT_COMPLETION_PROMPT_READY, captureGenerationData);
-        });
 
-        // Listen for new messages to start the refresh cycle
-        // Only start the refresh cycle when a message is received to avoid unnecessary refreshes
-        eventSource.on(eventTypes.APP_READY, () => {
+            // Listen for end of new messages to start the refresh cycle
             eventSource.on(eventTypes.MESSAGE_RECEIVED, () => {
                 if (settings.enabled && lastGenerationData.prompt) {
                     debugLog('Message received, starting refresh cycle');
