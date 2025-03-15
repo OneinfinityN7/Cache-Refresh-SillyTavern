@@ -41,14 +41,14 @@
                     Maximum Refreshes
                 </label>
                 <div class="flex-container">
-                    <input id="cache_refresher_max_refreshes" class="text_pole flex1 wide100p" type="number" min="1" max="20" value="3">
+                    <input id="cache_refresher_max_refreshes" class="text_pole flex1 wide100p" type="number" min="1" max="1000" value="3">
                 </div>
                 
                 <!-- Refresh interval setting -->
                 <div class="cache-refresher-setting-item">
                     <label for="cache_refresher_interval" title="Interval between cache refreshes in minutes">
                         <span>Refresh Interval (minutes)</span>
-                        <input type="number" id="cache_refresher_interval" name="cache_refresher_interval" min="0.5" max="10" step="0.1" class="text_pole textarea_compact">
+                        <input type="number" id="cache_refresher_interval" name="cache_refresher_interval" min="0.5" max="1000" step="0.1" class="text_pole textarea_compact">
                     </label>
                 </div>
                 
@@ -62,9 +62,9 @@
                 
                 <!-- Caching depth setting -->
                 <div class="cache-refresher-setting-item">
-                    <label for="cache_refresher_caching_depth" title="Depth of conversation history to keep when truncating">
+                    <label for="cache_refresher_caching_depth" title="Put the value that is in your config.yaml">
                         <span>Caching Depth</span>
-                        <input type="number" id="cache_refresher_caching_depth" name="cache_refresher_caching_depth" min="1" max="10" class="text_pole textarea_compact">
+                        <input type="number" id="cache_refresher_caching_depth" name="cache_refresher_caching_depth" min="1" max="1000" class="text_pole textarea_compact">
                     </label>
                 </div>
             </div>

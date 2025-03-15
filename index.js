@@ -115,7 +115,7 @@ const defaultSettings = {
     showNotifications: true,               // Whether to display toast notifications for each refresh
     showStatusIndicator: true,             // Whether to display the floating status indicator
     cachingAtDepth: 2,                     // Depth of the caching for conversation truncation
-    useTruncation: true,                   // Whether to use truncated messages by default
+    useTruncation: false,                  // Whether to use truncated messages by default
 };
 
 // Initialize extension settings

@@ -19,9 +19,9 @@ However, these caches typically have a short lifespan (often just a few minutes)
 *   A floating status indicator shows the number of remaining refreshes and a countdown timer, and a notification appear after each succesful refresh.
 *   If you change or leave the conversation, the timer will stop.
 
-### OpenRouter Logs Analysis
+### Price Comparison with Claude Sonnet 3.7 using OpenRouter Logs
 
-#### Price Comparison with Claude Sonnet 3.7 (4000 tokens, 12 messages)
+#### 12 messages conversation
 
 | Caching Method | Prompt Tokens | Completion Tokens | Total Cost | % of Base Price |
 |----------------|---------------|-------------------|------------|-----------------|
@@ -29,13 +29,17 @@ However, these caches typically have a short lifespan (often just a few minutes)
 | Depth 2 + System | 4091 ($0.00379) | 414 ($0.00621) | $0.01 | 54% |
 | Cache refresh | 4091 ($0.00254) | 2 ($0.00003) | $0.00257 | 14% |
 
-#### Price Comparison with Claude Sonnet 3.7 (14000 tokens, 76 messages)
+Could have refresh 3 times (20 minutes between messages) and it would have cost you less than paying full price for the next message.
+
+#### 76 messages conversation
 
 | Caching Method | Prompt Tokens | Completion Tokens | Total Cost | % of Base Price |
 |----------------|---------------|-------------------|------------|-----------------|
 | No caching | 14412 ($0.04323) | 298 ($0.00447) | $0.0477 | 100% |
 | Depth 2 + System | 14412 ($0.00653) | 298 ($0.00447) | $0.011 | 23% |
 | Cache refresh | 14412 ($0.00541) | 2 ($0.00003) | $0.00544 | 11% |
+
+Could have refresh 6 times (35 minutes between messages) and it would have cost you less than paying full price for the next message.
 
 ## Installation
 
@@ -46,20 +50,25 @@ However, these caches typically have a short lifespan (often just a few minutes)
 ## Troubleshooting
 
 *   **Extension Not Appearing:** Ensure you've installed the extension correctly and restarted SillyTavern.
-*   **No Notifications:** Check that "Show Notifications" is enabled in the extension settings. If notifications are still not appearing, you may need to modify the HTML template yourself to ensure proper display.
+*   **No Notifications:** Check that "Show Notifications" is enabled in the extension settings. If notifications are still not appearing, you may need to modify the CSS template yourself to ensure proper display.
 
 *   **No Cache Reduction:**
-    *   Confirm that the model you're using supports cache reduction.
-    *   For Claude: Ensure you've activated caching in the config.yaml file. The relevant options are `enableSystemPromptCache` and `cachingAtDepth`. 
-      * For optimal caching, it's recommended to only enable `cachingAtDepth` and set it to an even number.
-      * The number represents caching depth: 0 is your most recent message (not recommended), 2 represents the two previous messages before (usually sufficient).
-      * If you enable `enableSystemPromptCache`, ensure your system prompt doesn't contain any random elements.
-      * For more details on Claude caching, see: https://rentry.org/pay-the-piper-less
+    *   Verify that your model supports caching.
+    *   Note that other extensions may interfere with cache refreshing functionality.
+    *   For Claude:
+      * Check your config.yaml file for caching settings, specifically `enableSystemPromptCache` and `cachingAtDepth`. (Note: On OpenRouter, system prompt caching is always enabled regardless of `enableSystemPromptCache`)
+      * Restart SillyTavern after modifying these configuration parameters.
+      * Ensure you're using `Chat Completion` mode, as Claude doesn't support caching for `Text Completion`.
+      * For optimal caching, it's recommended to set `cachingAtDepth` to an even number. The number represents caching depth: 0 is your most recent message (not recommended), 2 represents the two previous messages before (usually sufficient).
+      * When using `enableSystemPromptCache` (Claude endpoints only, always on for OpenRouter), avoid random elements or lorebooks in your system prompt.
+      * Learn more about Claude caching at: https://rentry.org/pay-the-piper-less
+      * Be aware that `openai_max_context` in your `Chat Completion` settings can provoke unexpected behavior.
+      * If (`openai_max_tokens` + total prompt tokens) exceeds `openai_max_context`, your conversation history will be truncated from the beginning to ensure that `openai_max_tokens` is never exceeded at the end of your completion.
 *   **Cache Still Expiring:**
-    *   Verify the extension is enabled.
-    *   Ensure the refresh interval is *shorter* than your API/model's cache lifetime.
+    *   Confirm the extension is enabled and running.
+    *   Set refresh intervals shorter than your model's cache timeout period.
     *   Use SillyTavern's API panel to compare the extension's refreshed prompts with the original prompts.
-    *   Check the browser's developer console (F12) for any error messages.
+    *   Look for error messages in the browser's developer console (F12).
 
 ## License
 
