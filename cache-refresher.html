@@ -27,6 +27,11 @@
                 <input type="checkbox" id="cache_refresher_show_status_indicator" checked>
                 <span data-i18n="Show Status Indicator">Show Status Indicator</span>
             </div>
+            
+            <div class="flex-container" title="Use truncated messages for cache refreshing">
+                <input type="checkbox" id="cache_refresher_use_truncation" checked>
+                <span data-i18n="Use Truncated Messages">Use Truncated Messages</span>
+            </div>
 
             <hr>
 
@@ -52,6 +57,14 @@
                     <label for="cache_refresher_max_tokens" title="Maximum tokens to request for cache refresh">
                         <span>Maximum Tokens</span>
                         <input type="number" id="cache_refresher_max_tokens" name="cache_refresher_max_tokens" min="1" max="4096" class="text_pole textarea_compact">
+                    </label>
+                </div>
+                
+                <!-- Caching depth setting -->
+                <div class="cache-refresher-setting-item">
+                    <label for="cache_refresher_caching_depth" title="Depth of conversation history to keep when truncating">
+                        <span>Caching Depth</span>
+                        <input type="number" id="cache_refresher_caching_depth" name="cache_refresher_caching_depth" min="1" max="10" class="text_pole textarea_compact">
                     </label>
                 </div>
             </div>

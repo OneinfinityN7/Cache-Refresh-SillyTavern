@@ -114,6 +114,8 @@ const defaultSettings = {
     maxTokens: 1,                          // Maximum tokens to request for cache refresh (keeping it minimal to reduce costs)
     showNotifications: true,               // Whether to display toast notifications for each refresh
     showStatusIndicator: true,             // Whether to display the floating status indicator
+    cachingAtDepth: 2,                     // Depth of the caching for conversation truncation
+    useTruncation: true,                   // Whether to use truncated messages by default
 };
 
 // Initialize extension settings
@@ -137,7 +139,6 @@ let refreshInProgress = false;          // Flag to prevent concurrent refreshes
 let statusIndicator = null;             // DOM element for the floating status indicator
 let nextRefreshTime = null;             // Timestamp for the next scheduled refresh
 let statusUpdateInterval = null;        // Interval for updating the countdown timer
-const cachingAtDepth = 2;               // For essential caching. Depth of the caching (couldn't verify the config.yaml directly) 
 // No system caching for OpenRouter.
 
 /**
@@ -265,6 +266,7 @@ async function updateSettingsPanel() {
         $('#cache_refresher_max_refreshes').val(settings.maxRefreshes);
         $('#cache_refresher_interval').val(settings.refreshInterval / (60 * 1000));
         $('#cache_refresher_min_tokens').val(settings.maxTokens);
+        $('#cache_refresher_caching_depth').val(settings.cachingAtDepth);
 
         // Update the status text to show current state
         const statusText = $('#cache_refresher_status_text');
@@ -360,6 +362,18 @@ async function bindSettingsHandlers() {
             await saveSettings();
             updateUI(); // Update UI immediately to show/hide the indicator
         });
+        
+        // Use truncation toggle - controls whether to use truncated messages
+        $('#cache_refresher_use_truncation').off('change').on('change', async function() {
+            settings.useTruncation = $(this).prop('checked');
+            await saveSettings();
+        });
+        
+        // Caching depth input - controls the depth of conversation history to keep
+        $('#cache_refresher_caching_depth').off('change input').on('change input', async function() {
+            settings.cachingAtDepth = parseInt($(this).val()) || defaultSettings.cachingAtDepth;
+            await saveSettings();
+        });
 
         debugLog('Settings handlers bound successfully');
     } catch (error) {
@@ -369,10 +383,40 @@ async function bindSettingsHandlers() {
 
 /**
  * Adds the extension buttons to the UI
- * Currently just initializes the UI state
+ * This adds a button to toggle between truncated and normal messages
  */
 async function addExtensionControls() {
-    // No need to add buttons - the extension will be controlled through the settings panel
+    // Add a button to the send form to toggle truncation
+    const sendFormArea = document.querySelector('#send_form');
+    if (sendFormArea && !document.querySelector('#cache_refresher_truncate_toggle')) {
+        const truncateButton = document.createElement('button');
+        truncateButton.id = 'cache_refresher_truncate_toggle';
+        truncateButton.className = 'menu_button fa-solid';
+        truncateButton.classList.add(settings.useTruncation ? 'fa-scissors' : 'fa-align-left');
+        truncateButton.title = settings.useTruncation ? 'Using truncated messages (click to use full messages)' : 'Using full messages (click to use truncated messages)';
+        
+        // Add the button to the send form
+        const sendButton = document.querySelector('#send_but');
+        if (sendButton && sendButton.parentNode) {
+            sendButton.parentNode.insertBefore(truncateButton, sendButton);
+            
+            // Add click event listener
+            truncateButton.addEventListener('click', function(event) {
+                event.preventDefault();
+                settings.useTruncation = !settings.useTruncation;
+                saveSettings();
+                
+                // Update button appearance
+                truncateButton.classList.toggle('fa-scissors', settings.useTruncation);
+                truncateButton.classList.toggle('fa-align-left', !settings.useTruncation);
+                truncateButton.title = settings.useTruncation ? 'Using truncated messages (click to use full messages)' : 'Using full messages (click to use truncated messages)';
+                
+                // Show notification
+                showNotification(`${settings.useTruncation ? 'Truncated' : 'Full'} messages will be used for cache refreshing`, 'info');
+            });
+        }
+    }
+    
     updateUI();
 }
 
@@ -485,8 +529,8 @@ async function refreshCache() {
 
         // Create a truncated version of the conversation history
         const refreshData = {...lastGenerationData};
-        if (refreshData.prompt && Array.isArray(refreshData.prompt) && chatCompletionSettings.chat_completion_source === "openrouter") {
-            refreshData.prompt = truncateConversationHistory(refreshData.prompt);
+        if (refreshData.prompt && Array.isArray(refreshData.prompt) && chatCompletionSettings.chat_completion_source === "openrouter" && settings.useTruncation) {
+            refreshData.prompt = truncateConversationHistory(refreshData.prompt, settings.cachingAtDepth);
             debugLog('Using truncated conversation for refresh', refreshData);
         }
 
@@ -531,7 +575,7 @@ async function refreshCache() {
  * @param {number} cachingDepth - The depth to truncate at (number of role transitions to keep)
  * @returns {Array} - The truncated conversation history
  */
-function truncateConversationHistory(messages, cachingDepth = cachingAtDepth) {
+function truncateConversationHistory(messages, cachingDepth = settings.cachingAtDepth) {
     let passedThePrefill = false;
     let depth = 0;
     const n_messages = messages.length - 1;
@@ -639,6 +683,9 @@ jQuery(async ($) => {
 
         // Bind event handlers for all interactive elements
         bindSettingsHandlers();
+        
+        // Make sure the UI is updated when settings change
+        $('#cache_refresher_use_truncation').prop('checked', settings.useTruncation);
 
         // Set up event listeners for SillyTavern events
         eventSource.on(eventTypes.APP_READY, () => {
